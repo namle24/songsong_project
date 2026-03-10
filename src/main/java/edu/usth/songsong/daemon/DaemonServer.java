@@ -33,10 +33,16 @@ public class DaemonServer {
     private final File dataFolder;
     private final ExecutorService threadPool;
 
-    public DaemonServer(String directoryHost, int directoryPort) {
+    private final int tcpPort;
+
+    public DaemonServer(String directoryHost, int directoryPort, int tcpPort, String dataDirPath) {
         this.directoryHost = directoryHost;
         this.directoryPort = directoryPort;
-        this.dataFolder = new File(DATA_DIR);
+        this.tcpPort = tcpPort;
+        this.dataFolder = new File(dataDirPath);
+        if (!this.dataFolder.exists()) {
+            this.dataFolder.mkdirs();
+        }
         this.threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
     }
 
@@ -64,7 +70,7 @@ public class DaemonServer {
             DirectoryService directory = (DirectoryService) registry.lookup("DirectoryService");
 
             String localIp = InetAddress.getLocalHost().getHostAddress();
-            directory.register(localIp, TCP_PORT, files);
+            directory.register(localIp, tcpPort, files);
 
             LOG.info("Registered with Directory at " + directoryHost + ":" + directoryPort);
         } catch (Exception e) {
@@ -80,7 +86,7 @@ public class DaemonServer {
                 Registry registry = LocateRegistry.getRegistry(directoryHost, directoryPort);
                 DirectoryService directory = (DirectoryService) registry.lookup("DirectoryService");
                 String localIp = InetAddress.getLocalHost().getHostAddress();
-                directory.unregister(localIp, TCP_PORT);
+                directory.unregister(localIp, tcpPort);
                 LOG.info("Unregistered from Directory");
             } catch (Exception e) {
                 LOG.log(Level.WARNING, "Failed to unregister on shutdown", e);
@@ -91,8 +97,8 @@ public class DaemonServer {
 
     /** Starts TCP server, accepts connections and dispatches to thread pool. */
     private void startTcpServer() {
-        try (ServerSocket serverSocket = new ServerSocket(TCP_PORT)) {
-            LOG.info("Daemon TCP server listening on port " + TCP_PORT);
+        try (ServerSocket serverSocket = new ServerSocket(tcpPort)) {
+            LOG.info("Daemon TCP server listening on port " + tcpPort);
 
             while (!Thread.currentThread().isInterrupted()) {
                 Socket clientSocket = serverSocket.accept();
@@ -105,14 +111,16 @@ public class DaemonServer {
     }
 
     /**
-     * Usage: java DaemonServer [directoryHost] [directoryRmiPort]
-     * Defaults: localhost 1099
+     * Usage: java DaemonServer [directoryHost] [directoryRmiPort] [tcpPort] [dataDir]
+     * Defaults: localhost 1099 5000 ./data
      */
     public static void main(String[] args) {
         String dirHost = args.length > 0 ? args[0] : "localhost";
         int dirPort = args.length > 1 ? Integer.parseInt(args[1]) : 1099;
+        int tcpPort = args.length > 2 ? Integer.parseInt(args[2]) : TCP_PORT;
+        String dataDirPath = args.length > 3 ? args[3] : DATA_DIR;
 
-        DaemonServer daemon = new DaemonServer(dirHost, dirPort);
+        DaemonServer daemon = new DaemonServer(dirHost, dirPort, tcpPort, dataDirPath);
 
         List<String> files = daemon.scanFiles();
         if (files.isEmpty()) {
