@@ -34,6 +34,5 @@ build/
 
 ### Project prompts & docs (not for GitHub) ###
 prompt_*.md
-step*_explanation.md
 system_rules.md
 subjet-usth-2026.pdf
