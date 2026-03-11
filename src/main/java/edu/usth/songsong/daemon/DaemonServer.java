@@ -64,15 +64,15 @@ public class DaemonServer {
     }
 
     /** Registers this daemon's files with the Directory via RMI. */
-    private void registerWithDirectory(List<String> files) {
+    private void registerWithDirectory(List<String> files, String preferredIp) {
         try {
             Registry registry = LocateRegistry.getRegistry(directoryHost, directoryPort);
             DirectoryService directory = (DirectoryService) registry.lookup("DirectoryService");
 
-            String localIp = InetAddress.getLocalHost().getHostAddress();
+            String localIp = (preferredIp != null) ? preferredIp : InetAddress.getLocalHost().getHostAddress();
             directory.register(localIp, tcpPort, files);
 
-            LOG.info("Registered with Directory at " + directoryHost + ":" + directoryPort);
+            LOG.info("Registered " + localIp + ":" + tcpPort + " with Directory");
         } catch (Exception e) {
             LOG.log(Level.SEVERE, "Failed to register with Directory", e);
             System.exit(1);
