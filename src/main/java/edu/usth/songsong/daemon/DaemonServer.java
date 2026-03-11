@@ -111,23 +111,19 @@ public class DaemonServer {
     }
 
     /**
-     * Usage: java DaemonServer [directoryHost] [directoryRmiPort] [tcpPort] [dataDir]
-     * Defaults: localhost 1099 5000 ./data
+     * Usage: java DaemonServer [dirHost] [dirPort] [tcpPort] [dataDir] [localIp]
      */
     public static void main(String[] args) {
         String dirHost = args.length > 0 ? args[0] : "localhost";
         int dirPort = args.length > 1 ? Integer.parseInt(args[1]) : 1099;
         int tcpPort = args.length > 2 ? Integer.parseInt(args[2]) : TCP_PORT;
         String dataDirPath = args.length > 3 ? args[3] : DATA_DIR;
+        String localIp = args.length > 4 ? args[4] : null;
 
         DaemonServer daemon = new DaemonServer(dirHost, dirPort, tcpPort, dataDirPath);
 
         List<String> files = daemon.scanFiles();
-        if (files.isEmpty()) {
-            LOG.warning("No files to serve. Put files in " + DATA_DIR);
-        }
-
-        daemon.registerWithDirectory(files);
+        daemon.registerWithDirectory(files, localIp);
         daemon.addShutdownHook();
         daemon.startTcpServer();
     }

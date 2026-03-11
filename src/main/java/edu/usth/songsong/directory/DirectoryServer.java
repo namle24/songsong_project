@@ -37,7 +37,7 @@ public class DirectoryServer extends UnicastRemoteObject implements DirectorySer
     private final ScheduledExecutorService healthChecker;
 
     public DirectoryServer() throws RemoteException {
-        super();
+        super(1099); // Use fixed port 1099 for the remote object to be firewall-friendly
         this.fileToClientsMap = new ConcurrentHashMap<>();
         this.registeredClients = Collections.synchronizedSet(new HashSet<>());
         this.clientToFilesMap = new ConcurrentHashMap<>();
