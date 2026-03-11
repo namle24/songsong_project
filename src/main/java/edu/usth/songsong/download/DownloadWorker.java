@@ -62,9 +62,11 @@ public class DownloadWorker implements Callable<Void> {
 
     private boolean downloadFragment(FragmentInfo fragment, ClientInfo daemon) {
         int downloadedBytes = 0;
-        try (Socket socket = new Socket(daemon.getIp(), daemon.getPort())) {
-            socket.setSoTimeout(10000); // 10 seconds timeout
-            
+        try (Socket socket = new Socket()) {
+            // Set 2 seconds connection timeout to detect dead sources quickly
+            socket.connect(new java.net.InetSocketAddress(daemon.getIp(), daemon.getPort()), 2000);
+            socket.setSoTimeout(10000); // 10 seconds read timeout
+
             OutputStream out = socket.getOutputStream();
             // Protocol: GET <filename> <offset> <length>
             String request = String.format("GET %s %d %d\n", fragment.filename(), fragment.offset(), fragment.length());
@@ -73,28 +75,28 @@ public class DownloadWorker implements Callable<Void> {
 
             try (RandomAccessFile raf = new RandomAccessFile(destinationFile, "rw")) {
                 raf.seek(fragment.offset());
-                
+
                 byte[] buffer = new byte[8192];
                 int remaining = fragment.length();
-                
+
                 var inStream = socket.getInputStream();
 
                 while (remaining > 0) {
                     int toRead = Math.min(buffer.length, remaining);
                     int readCount = inStream.read(buffer, 0, toRead);
-                    
+
                     if (readCount == -1) {
                         throw new IOException("Unexpected end of stream from daemon " + daemon);
                     }
-                    
+
                     raf.write(buffer, 0, readCount);
                     downloadedBytes += readCount;
                     remaining -= readCount;
                 }
             }
 
-            LOG.fine(String.format("Successfully downloaded fragment [%d - %d] from %s", 
-                fragment.offset(), fragment.offset() + fragment.length() - 1, daemon));
+            LOG.fine(String.format("Successfully downloaded fragment [%d - %d] from %s",
+                    fragment.offset(), fragment.offset() + fragment.length() - 1, daemon));
             return true;
 
         } catch (SocketException | SocketTimeoutException e) {
@@ -107,15 +109,18 @@ public class DownloadWorker implements Callable<Void> {
     }
 
     private void handleFailure(FragmentInfo fragment, ClientInfo daemon, int downloadedBytes, Exception e) {
-        LOG.log(Level.WARNING, String.format("Connection to %s failed during transfer of %s. Bytes downloaded: %d out of %d. Reason: %s",
-            daemon, fragment.filename(), downloadedBytes, fragment.length(), e.getMessage()));
+        LOG.log(Level.WARNING,
+                String.format(
+                        "Connection to %s failed during transfer of %s. Bytes downloaded: %d out of %d. Reason: %s",
+                        daemon, fragment.filename(), downloadedBytes, fragment.length(), e.getMessage()));
 
         int remainingBytes = fragment.length() - downloadedBytes;
         if (remainingBytes > 0) {
             long newOffset = fragment.offset() + downloadedBytes;
             FragmentInfo remainingFragment = new FragmentInfo(fragment.filename(), newOffset, remainingBytes);
             fragmentQueue.offer(remainingFragment);
-            LOG.info(String.format("Put remaining fragment [%d, len=%d] back into the queue for failover.", newOffset, remainingBytes));
+            LOG.info(String.format("Put remaining fragment [%d, len=%d] back into the queue for failover.", newOffset,
+                    remainingBytes));
         }
     }
 }
