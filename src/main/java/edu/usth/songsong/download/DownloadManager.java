@@ -2,6 +2,7 @@ package edu.usth.songsong.download;
 
 import edu.usth.songsong.common.ClientInfo;
 import edu.usth.songsong.common.DirectoryService;
+import edu.usth.songsong.common.ProgressListener; // Added
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -46,6 +47,11 @@ public class DownloadManager {
     }
 
     public void downloadFile(String filename) {
+        downloadFile(filename, null);
+    }
+
+    public void downloadFile(String filename, ProgressListener listener) {
+        if (listener != null) listener.onLog("Starting download for: " + filename);
         LOG.info("Starting download for: " + filename);
         try {
             // Step 1: Call RMI lookup(filename)
@@ -54,19 +60,28 @@ public class DownloadManager {
             Set<ClientInfo> daemons = directory.lookup(filename);
 
             if (daemons == null || daemons.isEmpty()) {
-                LOG.warning("File '" + filename + "' is not available on any connected client.");
+                String error = "File '" + filename + "' is not available on any connected client.";
+                LOG.warning(error);
+                if (listener != null) listener.onError(error);
                 return;
             }
+            
             List<ClientInfo> daemonList = new ArrayList<>(daemons);
-            LOG.info("Found " + daemonList.size() + " daemons hosting '" + filename + "'.");
+            String infoMsg = "Found " + daemonList.size() + " daemons hosting '" + filename + "'.";
+            LOG.info(infoMsg);
+            if (listener != null) listener.onLog(infoMsg);
 
             // Step 2: Connect via TCP to *one* of the daemons and send SIZE <filename>
             long totalSize = getFileSizeFromDaemon(daemonList.get(0), filename);
             if (totalSize <= 0) {
-                LOG.warning("Failed to retrieve file size or file is empty.");
+                String error = "Failed to retrieve file size or file is empty.";
+                LOG.warning(error);
+                if (listener != null) listener.onError(error);
                 return;
             }
-            LOG.info("Total file size: " + totalSize + " bytes.");
+            String sizeMsg = "Total file size: " + totalSize + " bytes.";
+            LOG.info(sizeMsg);
+            if (listener != null) listener.onLog(sizeMsg);
 
             // Output file
             File outputFile = new File(DOWNLOADS_DIR, filename);
@@ -84,17 +99,21 @@ public class DownloadManager {
                 queue.offer(new FragmentInfo(filename, offset, length));
                 offset += length;
             }
-            LOG.info("Divided file into " + queue.size() + " fragments of basic size " + FRAGMENT_SIZE + " bytes.");
+            String fragMsg = "Divided file into " + queue.size() + " fragments of basic size " + FRAGMENT_SIZE + " bytes.";
+            LOG.info(fragMsg);
+            if(listener != null) listener.onLog(fragMsg);
 
             // Step 4 (Parallel Execution)
             int threadCount = Math.max(1, daemonList.size()); // At least 1 thread, max depends on needs
             ExecutorService executor = Executors.newFixedThreadPool(threadCount);
 
-            LOG.info("Starting " + threadCount + " download workers...");
+            String startMsg = "Starting " + threadCount + " download workers...";
+            LOG.info(startMsg);
+            if (listener != null) listener.onLog(startMsg);
             long startTime = System.currentTimeMillis();
 
             for (int i = 0; i < threadCount; i++) {
-                executor.submit(new DownloadWorker(queue, daemonList, outputFile));
+                executor.submit(new DownloadWorker(queue, daemonList, outputFile, listener));
             }
 
             executor.shutdown();
@@ -102,13 +121,22 @@ public class DownloadManager {
 
             if (finished) {
                 long duration = System.currentTimeMillis() - startTime;
-                LOG.info(String.format("Download completed successfully! File saved to %s. Duration: %d ms.", outputFile.getAbsolutePath(), duration));
+                String successMsg = String.format("Download completed successfully! File saved to %s. Duration: %d ms.", outputFile.getAbsolutePath(), duration);
+                LOG.info(successMsg);
+                if (listener != null) {
+                    listener.onLog(successMsg);
+                    listener.onComplete(duration, outputFile.getAbsolutePath());
+                }
             } else {
-                LOG.warning("Download timed out.");
+                String timeoutMsg = "Download timed out.";
+                LOG.warning(timeoutMsg);
+                if (listener != null) listener.onError(timeoutMsg);
             }
 
         } catch (Exception e) {
-            LOG.log(Level.SEVERE, "Download manager encountered a critical error", e);
+            String crashMsg = "Download manager encountered a critical error: " + e.getMessage();
+            LOG.log(Level.SEVERE, crashMsg, e);
+            if (listener != null) listener.onError(crashMsg);
         }
     }
 

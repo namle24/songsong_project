@@ -36,3 +36,6 @@ build/
 prompt_*.md
 system_rules.md
 subjet-usth-2026.pdf
+step*.md
+testing_guide.md
+.agent/
