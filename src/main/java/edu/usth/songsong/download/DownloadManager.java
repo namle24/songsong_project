@@ -145,7 +145,7 @@ public class DownloadManager {
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              OutputStream out = socket.getOutputStream()) {
 
-            socket.setSoTimeout(5000); // 5 sec timeout for getting size
+            socket.setSoTimeout(20000); // 20 sec timeout for getting size over Internet
 
             String request = "SIZE " + filename + "\n";
             out.write(request.getBytes());

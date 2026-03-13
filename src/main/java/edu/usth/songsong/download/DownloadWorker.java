@@ -65,9 +65,9 @@ public class DownloadWorker implements Callable<Void> {
     private boolean downloadFragment(FragmentInfo fragment, ClientInfo daemon) {
         int downloadedBytes = 0;
         try (Socket socket = new Socket()) {
-            // Set 2 seconds connection timeout to detect dead sources quickly
-            socket.connect(new java.net.InetSocketAddress(daemon.getIp(), daemon.getPort()), 2000);
-            socket.setSoTimeout(10000); // 10 seconds read timeout
+            // Set 5 seconds connection timeout for Internet lag
+            socket.connect(new java.net.InetSocketAddress(daemon.getIp(), daemon.getPort()), 5000);
+            socket.setSoTimeout(20000); // 20 sec timeout for getting size over Internet out for slow Internet
 
             OutputStream out = socket.getOutputStream();
             // Protocol: GET <filename> <offset> <length>
