@@ -26,11 +26,13 @@ public class DownloadWorker implements Callable<Void> {
     private final Queue<FragmentInfo> fragmentQueue;
     private final List<ClientInfo> availableDaemons;
     private final File destinationFile;
+    private final edu.usth.songsong.common.ProgressListener progressListener; // Added
 
-    public DownloadWorker(Queue<FragmentInfo> fragmentQueue, List<ClientInfo> availableDaemons, File destinationFile) {
+    public DownloadWorker(Queue<FragmentInfo> fragmentQueue, List<ClientInfo> availableDaemons, File destinationFile, edu.usth.songsong.common.ProgressListener progressListener) {
         this.fragmentQueue = fragmentQueue;
         this.availableDaemons = availableDaemons;
         this.destinationFile = destinationFile;
+        this.progressListener = progressListener; // Added
     }
 
     @Override
@@ -92,11 +94,18 @@ public class DownloadWorker implements Callable<Void> {
                     raf.write(buffer, 0, readCount);
                     downloadedBytes += readCount;
                     remaining -= readCount;
+
+                    // Thông báo tới UI
+                    if(progressListener != null) {
+                        progressListener.onProgress(readCount);
+                    }
                 }
             }
 
-            LOG.fine(String.format("Successfully downloaded fragment [%d - %d] from %s",
-                    fragment.offset(), fragment.offset() + fragment.length() - 1, daemon));
+            String msg = String.format("Successfully downloaded fragment [%d - %d] from %s",
+                    fragment.offset(), fragment.offset() + fragment.length() - 1, daemon);
+            LOG.fine(msg);
+            if(progressListener != null) progressListener.onLog(msg);
             return true;
 
         } catch (SocketException | SocketTimeoutException e) {
@@ -109,10 +118,11 @@ public class DownloadWorker implements Callable<Void> {
     }
 
     private void handleFailure(FragmentInfo fragment, ClientInfo daemon, int downloadedBytes, Exception e) {
-        LOG.log(Level.WARNING,
-                String.format(
-                        "Connection to %s failed during transfer of %s. Bytes downloaded: %d out of %d. Reason: %s",
-                        daemon, fragment.filename(), downloadedBytes, fragment.length(), e.getMessage()));
+        String errorMsg = String.format(
+                "Connection to %s failed during transfer of %s. Bytes: %d. Reason: %s",
+                daemon, fragment.filename(), downloadedBytes, e.getMessage());
+        LOG.log(Level.WARNING, errorMsg);
+        if(progressListener != null) progressListener.onLog("[FAILOVER] " + errorMsg);
 
         int remainingBytes = fragment.length() - downloadedBytes;
         if (remainingBytes > 0) {
