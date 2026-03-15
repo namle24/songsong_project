@@ -34,7 +34,7 @@ public class FileTransferTask implements Runnable {
             }
 
             LOG.fine("Request: " + line);
-            String[] parts = line.trim().split("\\s+");
+            String[] parts = line.trim().split("\\s+", 2); // limit=2: [command, rest]
             String command = parts[0].toUpperCase();
 
             switch (command) {
@@ -55,15 +55,18 @@ public class FileTransferTask implements Runnable {
 
     /** GET <filename> <offset> <length> -> sends raw bytes from file. */
     private void handleGet(String[] parts, OutputStream out) throws IOException {
-        if (parts.length < 4) {
+        // parts[1] là phần còn lại: "<filename> <offset> <length>"
+        String[] subParts = parts[1].split("\\s+");
+        int n = subParts.length;
+        if (n < 3) {
             out.write("ERROR Usage: GET <filename> <offset> <length>\n".getBytes());
             out.flush();
             return;
         }
-
-        String filename = parts[1];
-        long offset = Long.parseLong(parts[2]);
-        int length = Integer.parseInt(parts[3]);
+        // Ghép tên file: tất cả trừ 2 phần tử cuối (offset và length)
+        long offset = Long.parseLong(subParts[n - 2]);
+        int length = Integer.parseInt(subParts[n - 1]);
+        String filename = String.join(" ", java.util.Arrays.copyOfRange(subParts, 0, n - 2));
 
         File file = new File(dataFolder, filename);
         if (!file.exists()) {
@@ -109,7 +112,7 @@ public class FileTransferTask implements Runnable {
             out.flush();
             return;
         }
-
+        // parts[1] là toàn bộ tên file (kể cả khoảng trắng)
         String filename = parts[1];
         File file = new File(dataFolder, filename);
 
