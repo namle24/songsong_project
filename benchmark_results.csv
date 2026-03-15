@@ -1,0 +1,5 @@
+daemons,mode,file_size_mb,duration_ms,speed_mbps,speedup
+1,sequential,20,16159,1.24,1.00
+2,parallel,20,8052,2.48,2.01
+3,parallel,20,5627,3.55,2.87
+4,parallel,20,4005,4.99,4.03

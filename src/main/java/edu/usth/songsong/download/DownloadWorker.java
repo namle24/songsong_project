@@ -9,6 +9,7 @@ import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.zip.GZIPInputStream;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Callable;
@@ -81,7 +82,8 @@ public class DownloadWorker implements Callable<Void> {
                 byte[] buffer = new byte[8192];
                 int remaining = fragment.length();
 
-                var inStream = socket.getInputStream();
+                // Data Compression: decompress GZip stream from daemon
+                var inStream = new GZIPInputStream(socket.getInputStream());
 
                 while (remaining > 0) {
                     int toRead = Math.min(buffer.length, remaining);

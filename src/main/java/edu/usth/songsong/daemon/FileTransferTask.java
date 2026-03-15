@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Handles one TCP connection from a downloading client.
@@ -83,14 +84,28 @@ public class FileTransferTask implements Runnable {
             byte[] buffer = new byte[8192];
             int remaining = length;
 
+            int networkDelayMs = Integer.getInteger("songsong.network.delay", 0);
+
+            // Data Compression: wrap output in GZip to reduce bytes on the wire
+            GZIPOutputStream gzOut = new GZIPOutputStream(out);
+
             while (remaining > 0) {
                 int toRead = Math.min(buffer.length, remaining);
                 int bytesRead = raf.read(buffer, 0, toRead);
                 if (bytesRead == -1)
                     break; // EOF
-                out.write(buffer, 0, bytesRead);
+                gzOut.write(buffer, 0, bytesRead);
                 remaining -= bytesRead;
+
+                // Latency injection: simulate slow network for benchmarking
+                if (networkDelayMs > 0) {
+                    try { Thread.sleep(networkDelayMs); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
             }
+            gzOut.finish(); // flush compressed data without closing underlying stream
             out.flush();
 
             LOG.fine("Sent " + (length - remaining) + " bytes of " + filename
