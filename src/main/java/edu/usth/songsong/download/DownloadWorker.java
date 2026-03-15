@@ -102,6 +102,16 @@ public class DownloadWorker implements Callable<Void> {
                         progressListener.onProgress(readCount);
                     }
                 }
+
+                // Gracefully consume the GZIP trailer so the server doesn't get a Broken pipe
+                try {
+                    byte[] dump = new byte[1024];
+                    while (inStream.read(dump) != -1) {
+                        // Exhaust stream
+                    }
+                } catch (Exception ignored) {
+                    // It's fine if this fails, we successfully received our fragment payload
+                }
             }
 
             String msg = String.format("Successfully downloaded fragment [%d - %d] from %s",

@@ -47,6 +47,8 @@ public class FileTransferTask implements Runnable {
                 }
             }
 
+        } catch (java.net.SocketException e) {
+            LOG.fine("Client disconnected early (Broken pipe): " + e.getMessage());
         } catch (IOException e) {
             LOG.log(Level.WARNING, "Error handling client request", e);
         } finally {
