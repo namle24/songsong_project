@@ -36,7 +36,8 @@ build/
 prompt_*.md
 system_rules.md
 subjet-usth-2026.pdf
-
+step*.md
+testing_guide.md
 .agent/
 data/Screen Recording 2025-01-05 153728.mp4
 run_daemon.bat
