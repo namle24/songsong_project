@@ -121,7 +121,9 @@ public class DownloadManager {
 
             if (finished) {
                 long duration = System.currentTimeMillis() - startTime;
-                String successMsg = String.format("Download completed successfully! File saved to %s. Duration: %d ms.", outputFile.getAbsolutePath(), duration);
+                double speedMBps = (totalSize / (1024.0 * 1024.0)) / (duration / 1000.0);
+                String successMsg = String.format("Download completed successfully! File saved to %s.\nDuration: %d ms | Speed: %.2f MB/s", 
+                                                  outputFile.getAbsolutePath(), duration, speedMBps);
                 LOG.info(successMsg);
                 if (listener != null) {
                     listener.onLog(successMsg);
