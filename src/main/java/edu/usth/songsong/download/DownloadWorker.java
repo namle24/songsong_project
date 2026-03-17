@@ -27,13 +27,14 @@ public class DownloadWorker implements Callable<Void> {
     private final Queue<FragmentInfo> fragmentQueue;
     private final List<ClientInfo> availableDaemons;
     private final File destinationFile;
-    private final edu.usth.songsong.common.ProgressListener progressListener; // Added
+    private final edu.usth.songsong.common.ProgressListener progressListener;
 
-    public DownloadWorker(Queue<FragmentInfo> fragmentQueue, List<ClientInfo> availableDaemons, File destinationFile, edu.usth.songsong.common.ProgressListener progressListener) {
+    public DownloadWorker(Queue<FragmentInfo> fragmentQueue, List<ClientInfo> availableDaemons, File destinationFile,
+            edu.usth.songsong.common.ProgressListener progressListener) {
         this.fragmentQueue = fragmentQueue;
         this.availableDaemons = availableDaemons;
         this.destinationFile = destinationFile;
-        this.progressListener = progressListener; // Added
+        this.progressListener = progressListener;
     }
 
     @Override
@@ -54,8 +55,6 @@ public class DownloadWorker implements Callable<Void> {
             boolean success = downloadFragment(fragment, daemon);
 
             if (!success) {
-                // Failover handling logic has put the remaining fragment back in queue.
-                // We'll loop around and pick up whatever is next in queue.
                 LOG.warning("Fragment failed. Attempting next available fragment from a different daemon.");
             }
         }
@@ -66,7 +65,6 @@ public class DownloadWorker implements Callable<Void> {
     private boolean downloadFragment(FragmentInfo fragment, ClientInfo daemon) {
         int downloadedBytes = 0;
         try (Socket socket = new Socket()) {
-            // Set 5 seconds connection timeout for Internet lag
             socket.connect(new java.net.InetSocketAddress(daemon.getIp(), daemon.getPort()), 5000);
             socket.setSoTimeout(20000); // 20 sec timeout for getting size over Internet out for slow Internet
 
@@ -97,27 +95,24 @@ public class DownloadWorker implements Callable<Void> {
                     downloadedBytes += readCount;
                     remaining -= readCount;
 
-                    // Thông báo tới UI
-                    if(progressListener != null) {
+                    if (progressListener != null) {
                         progressListener.onProgress(readCount);
                     }
                 }
 
-                // Gracefully consume the GZIP trailer so the server doesn't get a Broken pipe
                 try {
                     byte[] dump = new byte[1024];
                     while (inStream.read(dump) != -1) {
-                        // Exhaust stream
                     }
                 } catch (Exception ignored) {
-                    // It's fine if this fails, we successfully received our fragment payload
                 }
             }
 
             String msg = String.format("Successfully downloaded fragment [%d - %d] from %s",
                     fragment.offset(), fragment.offset() + fragment.length() - 1, daemon);
             LOG.fine(msg);
-            if(progressListener != null) progressListener.onLog(msg);
+            if (progressListener != null)
+                progressListener.onLog(msg);
             return true;
 
         } catch (SocketException | SocketTimeoutException e) {
@@ -134,7 +129,8 @@ public class DownloadWorker implements Callable<Void> {
                 "Connection to %s failed during transfer of %s. Bytes: %d. Reason: %s",
                 daemon, fragment.filename(), downloadedBytes, e.getMessage());
         LOG.log(Level.WARNING, errorMsg);
-        if(progressListener != null) progressListener.onLog("[FAILOVER] " + errorMsg);
+        if (progressListener != null)
+            progressListener.onLog("[FAILOVER] " + errorMsg);
 
         int remainingBytes = fragment.length() - downloadedBytes;
         if (remainingBytes > 0) {
