@@ -33,19 +33,9 @@ build/
 
 ### Project prompts & docs (not for GitHub) ###
 prompt_*.md
-system_rules.md
 subjet-usth-2026.pdf
 step*.md
 testing_guide.md
 .agent/
 data/Screen Recording 2025-01-05 153728.mp4
-run_daemon.bat
-run_daemon.ps1
-run_directory.bat
-run_directory.ps1
-run_ui.bat
-run_ui.ps1
-downloads/
-data/
-
-docs/
+kpushlengit/
