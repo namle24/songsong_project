@@ -51,10 +51,10 @@ public class DownloadManager {
     }
 
     public void downloadFile(String filename, ProgressListener listener) {
-        if (listener != null) listener.onLog("Starting download for: " + filename);
+        if (listener != null)
+            listener.onLog("Starting download for: " + filename);
         LOG.info("Starting download for: " + filename);
         try {
-            // Step 1: Call RMI lookup(filename)
             Registry registry = LocateRegistry.getRegistry(directoryHost, directoryPort);
             DirectoryService directory = (DirectoryService) registry.lookup("DirectoryService");
             Set<ClientInfo> daemons = directory.lookup(filename);
@@ -62,26 +62,29 @@ public class DownloadManager {
             if (daemons == null || daemons.isEmpty()) {
                 String error = "File '" + filename + "' is not available on any connected client.";
                 LOG.warning(error);
-                if (listener != null) listener.onError(error);
+                if (listener != null)
+                    listener.onError(error);
                 return;
             }
-            
+
             List<ClientInfo> daemonList = new ArrayList<>(daemons);
             String infoMsg = "Found " + daemonList.size() + " daemons hosting '" + filename + "'.";
             LOG.info(infoMsg);
-            if (listener != null) listener.onLog(infoMsg);
+            if (listener != null)
+                listener.onLog(infoMsg);
 
-            // Step 2: Connect via TCP to *one* of the daemons and send SIZE <filename>
             long totalSize = getFileSizeFromDaemon(daemonList.get(0), filename);
             if (totalSize <= 0) {
                 String error = "Failed to retrieve file size or file is empty.";
                 LOG.warning(error);
-                if (listener != null) listener.onError(error);
+                if (listener != null)
+                    listener.onError(error);
                 return;
             }
             String sizeMsg = "Total file size: " + totalSize + " bytes.";
             LOG.info(sizeMsg);
-            if (listener != null) listener.onLog(sizeMsg);
+            if (listener != null)
+                listener.onLog(sizeMsg);
 
             // Output file
             File outputFile = new File(DOWNLOADS_DIR, filename);
@@ -91,7 +94,6 @@ public class DownloadManager {
                 raf.setLength(totalSize);
             }
 
-            // Step 3 (Fragmentation)
             ConcurrentLinkedQueue<FragmentInfo> queue = new ConcurrentLinkedQueue<>();
             long offset = 0;
             while (offset < totalSize) {
@@ -99,17 +101,19 @@ public class DownloadManager {
                 queue.offer(new FragmentInfo(filename, offset, length));
                 offset += length;
             }
-            String fragMsg = "Divided file into " + queue.size() + " fragments of basic size " + FRAGMENT_SIZE + " bytes.";
+            String fragMsg = "Divided file into " + queue.size() + " fragments of basic size " + FRAGMENT_SIZE
+                    + " bytes.";
             LOG.info(fragMsg);
-            if(listener != null) listener.onLog(fragMsg);
+            if (listener != null)
+                listener.onLog(fragMsg);
 
-            // Step 4 (Parallel Execution)
-            int threadCount = Math.max(1, daemonList.size()); // At least 1 thread, max depends on needs
+            int threadCount = Math.max(1, daemonList.size());
             ExecutorService executor = Executors.newFixedThreadPool(threadCount);
 
             String startMsg = "Starting " + threadCount + " download workers...";
             LOG.info(startMsg);
-            if (listener != null) listener.onLog(startMsg);
+            if (listener != null)
+                listener.onLog(startMsg);
             long startTime = System.currentTimeMillis();
 
             for (int i = 0; i < threadCount; i++) {
@@ -121,7 +125,8 @@ public class DownloadManager {
 
             if (finished) {
                 long duration = System.currentTimeMillis() - startTime;
-                String successMsg = String.format("Download completed successfully! File saved to %s. Duration: %d ms.", outputFile.getAbsolutePath(), duration);
+                String successMsg = String.format("Download completed successfully! File saved to %s. Duration: %d ms.",
+                        outputFile.getAbsolutePath(), duration);
                 LOG.info(successMsg);
                 if (listener != null) {
                     listener.onLog(successMsg);
@@ -130,20 +135,22 @@ public class DownloadManager {
             } else {
                 String timeoutMsg = "Download timed out.";
                 LOG.warning(timeoutMsg);
-                if (listener != null) listener.onError(timeoutMsg);
+                if (listener != null)
+                    listener.onError(timeoutMsg);
             }
 
         } catch (Exception e) {
             String crashMsg = "Download manager encountered a critical error: " + e.getMessage();
             LOG.log(Level.SEVERE, crashMsg, e);
-            if (listener != null) listener.onError(crashMsg);
+            if (listener != null)
+                listener.onError(crashMsg);
         }
     }
 
     private long getFileSizeFromDaemon(ClientInfo daemon, String filename) {
         try (Socket socket = new Socket(daemon.getIp(), daemon.getPort());
-             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-             OutputStream out = socket.getOutputStream()) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                OutputStream out = socket.getOutputStream()) {
 
             socket.setSoTimeout(20000); // 20 sec timeout for getting size over Internet
 
@@ -167,7 +174,8 @@ public class DownloadManager {
 
     public static void main(String[] args) {
         if (args.length < 1) {
-            System.out.println("Usage: java edu.usth.songsong.download.DownloadManager <filename> [directoryHost] [directoryPort]");
+            System.out.println(
+                    "Usage: java edu.usth.songsong.download.DownloadManager <filename> [directoryHost] [directoryPort]");
             return;
         }
 

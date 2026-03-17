@@ -28,7 +28,6 @@ D2_PID=$!
 sleep 2
 
 echo "Starting DownloadManager for testfile.bin (Parallel Mode)..."
-# We expect this to use both daemons and succeed
 java -cp out edu.usth.songsong.download.DownloadManager testfile.bin localhost 1099
 
 echo "Verifying file integrity..."

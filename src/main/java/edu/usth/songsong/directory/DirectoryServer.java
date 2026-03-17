@@ -28,10 +28,8 @@ public class DirectoryServer extends UnicastRemoteObject implements DirectorySer
     // filename -> set of clients that have it
     private final ConcurrentHashMap<String, Set<ClientInfo>> fileToClientsMap;
 
-    // all registered clients (for health check iteration)
     private final Set<ClientInfo> registeredClients;
 
-    // client -> its files (reverse index for fast unregister)
     private final ConcurrentHashMap<ClientInfo, Set<String>> clientToFilesMap;
 
     private final ScheduledExecutorService healthChecker;

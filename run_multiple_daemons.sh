@@ -20,7 +20,7 @@ echo " Starting $NUM_DAEMONS Daemons registering to $SERVER_IP..."
 for i in $(seq 1 $NUM_DAEMONS); do
     CURRENT_PORT=$((START_PORT + i - 1))
     
-    # Run in background (&) so we can start many at once
+    # Run in background (&) so can start many at once
     java -cp target/classes edu.usth.songsong.daemon.DaemonServer localhost 1099 $CURRENT_PORT ./data $SERVER_IP > /dev/null 2>&1 &
     
     echo " Started Daemon $i on port $CURRENT_PORT"
